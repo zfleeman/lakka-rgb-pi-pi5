@@ -1,6 +1,6 @@
 # RGB-Pi SCART cable on a Raspberry Pi 5 with stock Lakka
 
-This is how I got a Raspberry Pi 5 running the stock Lakka image to output 320x240 (240p) RGB to a CRT through the original RGB-Pi SCART cable on the GPIO header. No custom OS, no custom kernel, and no RGB-Pi software. Once RetroArch starts, its CRT SwitchRes feature sets each game's own resolution and refresh rate, including 480i for PS1 games that use it.
+This is how I got a Raspberry Pi 5 running the stock Lakka image to output 320x240 (240p) RGB to a CRT through the original RGB-Pi SCART cable on the GPIO header. No custom OS, no custom kernel, and no RGB-Pi software. Once RetroArch starts, its CRT SwitchRes feature sets each game's own resolution and refresh rate. Interlaced 480i works too, because the Pi 5 kernel can generate interlaced video on the GPIO header (see [below](#why-the-rgb-pi-instructions-dont-work-on-a-pi-5)).
 
 The whole setup is two files: [`rgb-pi-crt.txt`](rgb-pi-crt.txt) for the Pi's boot config and [`switchres.ini`](switchres.ini) for RetroArch, plus a few RetroArch settings.
 
@@ -10,9 +10,9 @@ The whole setup is two files: [`rgb-pi-crt.txt`](rgb-pi-crt.txt) for the Pi's bo
 |---|---|
 | Computer | Raspberry Pi 5 |
 | OS | [Lakka](https://www.lakka.tv/) 6.1, the stock Raspberry Pi 5 image |
-| Video cable | RGB-Pi SCART cable, the original passive one that plugs into the 40-pin GPIO header (not the HDMI-based RGB-Pi 2) |
+| Video cable | [RGB-Pi](https://www.rgb-pi.com/) SCART cable, the original passive one that plugs into the 40-pin GPIO header (not the HDMI-based RGB-Pi 2). Its maker now only sells the RGB-Pi 2, so the original is easiest to find second-hand. |
 | TV | A US RGB-modded CRT that takes RGB with composite sync. A PVM or a European SCART TV that takes RGB should work too. |
-| Audio | A USB sound card (C-Media chip) plugged into the TV's audio input. The cable can't carry audio on a Pi 5 (see [Limits](#limits)). |
+| Audio (optional) | A USB sound card (C-Media chip) plugged into the TV's audio input. You only need it for sound: the cable can't carry audio on a Pi 5, and the Pi 5 has no analog audio jack (see [Limits](#limits)). |
 
 Nothing is plugged into the Pi's HDMI ports.
 
@@ -42,7 +42,7 @@ This is only the boot mode. Because video now goes through KMS, RetroArch can ch
 
 Run these from another computer on the same network, in a clone of this repo. Lakka's SSH login is `root`, password `root` (Settings > Services > SSH turns it on).
 
-1. **Update the bootloader** if it's older than 2024-11-12. Interlaced modes need the RP1 firmware that came with it. Without it, `dmesg` shows `rp1-pio ... failed to contact RP1 firmware`.
+1. **Update the bootloader (only for 480i).** 240p works with any Pi 5 bootloader, so skip this if you don't need interlaced modes. 480i needs a bootloader from 2024-11-12 or later, which carries the RP1 firmware that generates interlaced sync. Without it, `dmesg` shows `rp1-pio ... failed to contact RP1 firmware`.
 
    ```
    ssh root@lakka.local rpi-eeprom-update -a
@@ -70,7 +70,7 @@ Run these from another computer on the same network, in a clone of this repo. La
    | `crt_switch_resolution_super = "0"` | Uses each game's own width. With super resolution on, RetroArch's on-screen text is squeezed about 8x sideways. |
    | `video_threaded = "false"` | Threaded video off, so RetroArch syncs to the CRT's refresh rate. |
    | `menu_driver = "rgui"` | The default XMB menu is unreadable at 240 lines. RGUI is made for low resolutions. |
-   | `audio_device = "plughw:CARD=Device,DEV=0"` | Sends sound to the USB sound card. `Device` is my card's ALSA name; `aplay -l` shows yours. |
+   | `audio_device = "plughw:CARD=Device,DEV=0"` | Optional, only with a USB sound card. Sends sound to the card. `Device` is my card's ALSA name; `aplay -l` shows yours. |
 
 5. **Reboot** with the cable plugged in: `ssh root@lakka.local reboot`.
 
@@ -92,7 +92,7 @@ Every CRT needs its own centering and size. I tune them with the [240p Test Suit
 
 ## Limits
 
-- **No audio through the cable.** The RGB-Pi sends audio out of GPIO 18 and 19, but the Pi 5 can only output PWM audio on GPIO 12 and 13, which the cable uses for green. Hence the USB sound card. Without one, there's no sound at all, because ALSA's default device is the HDMI port, which won't open with no screen on it.
+- **No audio through the cable.** The RGB-Pi sends audio out of GPIO 18 and 19, but the Pi 5 can only output PWM audio on GPIO 12 and 13, which the cable uses for green. The Pi 5 also has no analog audio jack, so a USB sound card is the only way to get sound to the TV. Without one, the setup still works, just with no sound: ALSA's default device is the HDMI port, which won't open with no screen on it.
 - **57 Hz and up.** My TV rolls below about 55 Hz, so `switchres.ini` starts at 57 Hz. Arcade games slower than that (e.g. Mortal Kombat at 54.7 Hz) run slightly fast. Console games all run near 60 Hz. If your TV handles 50 Hz, you can lower the range in `switchres.ini`.
 - **Brief sync loss on resolution changes.** With super resolution off, the TV loses sync for a moment whenever a game changes its horizontal resolution (some SNES, Genesis, and PS1 games do this mid-game).
 - **18-bit color**, the same as the RGB-Pi on a Pi 3 or 4.
