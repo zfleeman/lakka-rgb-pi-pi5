@@ -1,0 +1,11 @@
+# RGB-Pi SCART cable on a Raspberry Pi 5, driven by the RP1 DPI output under KMS.
+# Pulled into /flash/config.txt with "include rgb-pi-crt.txt". Comment that line out to go back to HDMI only.
+
+# RGB-Pi wiring is "RGB666 padhi": VSYNC on GPIO 2, HSYNC on GPIO 3, color on GPIO 4-9, 12-17, and 20-25.
+# 320x240p at 60 Hz (15.96 kHz) with active-low syncs, which the cable merges into composite sync.
+# Timings come from RGB-Pi OS 4's Pi 4 overlay.
+dtoverlay=vc4-kms-dpi-generic,rgb666-padhi
+dtparam=clock-frequency=6400000
+dtparam=hactive=320,hfp=17,hsync=30,hbp=34
+dtparam=vactive=240,vfp=1,vsync=3,vbp=22
+dtparam=hsync-invert,vsync-invert
